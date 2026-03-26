@@ -1,79 +1,71 @@
 # Healthcare CI/CD Lab — MediTrack Patient Appointment System
 
-A real-world CI/CD lab built around **MediTrack**, a patient appointment management API for a healthcare company. Students build and deploy the application through a fully automated GitHub Actions pipeline that includes testing, security scanning, Docker image publishing, and Kubernetes deployment.
+A real-world CI/CD lab built around **MediTrack**, a patient appointment management API for a healthcare company. Students build and deploy the application through a fully automated GitHub Actions pipeline that includes testing, Docker image publishing, and Kubernetes deployment.
 
 ## Scenario
 
 You have joined the DevOps team at **MediTrack Health**, a mid-size healthcare provider. The development team has built a patient appointment API and your job is to set up a CI/CD pipeline that:
 
 1. Runs automated tests on every push and pull request
-2. Scans the Docker image for security vulnerabilities (critical in healthcare)
-3. Builds and pushes the container image to DockerHub
-4. Deploys the application to the company's EKS cluster
-5. Exposes Prometheus metrics for the operations team to monitor
+2. Builds and pushes the container image to DockerHub
+3. Deploys the application to the company's EKS cluster
+4. Exposes Prometheus metrics for the operations team to monitor
 
-The application must pass all tests and a Trivy security scan before it can be deployed to production.
+The application must pass all tests before it can be deployed to production.
+
+> **Next step:** Once you complete this lab, move on to the [Healthcare DevSecOps Lab](https://github.com/anmutetech/healthcare-devsecops-lab) to add security scanning, secret detection, and policy enforcement to this pipeline.
 
 ## What Gets Created
 
 - **MediTrack API** -- Node.js/Express application with patient registration, appointment scheduling, and a dashboard UI
 - **Automated Tests** -- Jest test suite covering all API endpoints with coverage reporting
-- **Security Scanning** -- Trivy scans the Docker image and blocks deployment if CRITICAL or HIGH vulnerabilities are found
 - **Docker Image** -- Multi-stage build with non-root user, health check, and Alpine base
 - **Kubernetes Deployment** -- 3 replicas with liveness/readiness probes, resource limits, and ConfigMap-based configuration
 - **Prometheus Metrics** -- Request count, request duration, and appointment counters scraped every 15 seconds
-- **CI/CD Pipeline** -- 4-stage GitHub Actions workflow (Test → Scan → Build → Deploy)
+- **CI/CD Pipeline** -- 3-stage GitHub Actions workflow (Test → Build → Deploy)
 
 ## Architecture
 
 ```
  ┌─── GitHub Actions Pipeline ─────────────────────────────────────────────────────────┐
  │                                                                                      │
- │   ┌──────────────┐    ┌──────────────────┐    ┌──────────────┐    ┌──────────────┐  │
- │   │  1. Test      │    │  2. Security     │    │  3. Build &  │    │  4. Deploy   │  │
- │   │              │    │     Scan          │    │     Push     │    │     to EKS   │  │
- │   │  npm ci      │───▶│                  │───▶│              │───▶│              │  │
- │   │  npm test    │    │  docker build    │    │  docker push │    │  kubectl     │  │
- │   │  eslint      │    │  trivy scan      │    │  :latest     │    │  apply       │  │
- │   │  coverage    │    │  (CRITICAL/HIGH  │    │  :sha        │    │  set image   │  │
- │   │              │    │   blocks deploy) │    │              │    │  rollout     │  │
- │   └──────────────┘    └──────────────────┘    └──────┬───────┘    └──────┬───────┘  │
- │                                                      │                   │          │
- └──────────────────────────────────────────────────────┼───────────────────┼──────────┘
-                                                        │                   │
-                                                        ▼                   ▼
- ┌──────────────────┐                    ┌─── EKS Cluster ─────────────────────────────┐
- │  DockerHub       │                    │                                              │
- │  ┌────────────┐  │                    │  ┌─── Namespace: meditrack ──────────────┐   │
- │  │ meditrack- │  │                    │  │                                       │   │
- │  │ api:latest │──┼───────────────────▶│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ │   │
- │  │ api:<sha>  │  │                    │  │  │  Pod 1  │ │  Pod 2  │ │  Pod 3  │ │   │
- │  └────────────┘  │                    │  │  │  :3000  │ │  :3000  │ │  :3000  │ │   │
- └──────────────────┘                    │  │  │ /health │ │ /health │ │ /health │ │   │
-                                         │  │  └────┬────┘ └────┬────┘ └────┬────┘ │   │
-                                         │  │       │           │           │       │   │
-                                         │  │       └─────┬─────┴───────────┘       │   │
-                                         │  │             │                         │   │
-                                         │  │             ▼                         │   │
-                                         │  │  ┌──────────────────────┐             │   │
-                                         │  │  │  Service (LB)       │             │   │
-                                         │  │  │  Port: 80 → 3000    │             │   │
-                                         │  │  └──────────┬───────────┘             │   │
-                                         │  │             │                         │   │
-                                         │  │  ┌──────────┴───────────┐             │   │
-                                         │  │  │  ConfigMap           │             │   │
-                                         │  │  │  NODE_ENV=production │             │   │
-                                         │  │  │  LOG_LEVEL=info      │             │   │
-                                         │  │  └──────────────────────┘             │   │
-                                         │  └───────────────────────────────────────┘   │
-                                         │                                              │
-                                         │  ┌─── Monitoring ──────────────────────┐     │
-                                         │  │  Prometheus scrapes /metrics (15s)  │     │
-                                         │  │  → http_requests_total              │     │
-                                         │  │  → http_request_duration_seconds    │     │
-                                         │  │  → appointments_total               │     │
-                                         │  └─────────────────────────────────────┘     │
-                                         └──────────────────────────────────────────────┘
+ │   ┌──────────────┐         ┌──────────────────┐         ┌──────────────────┐        │
+ │   │  1. Test      │         │  2. Build &      │         │  3. Deploy       │        │
+ │   │              │         │     Push          │         │     to EKS       │        │
+ │   │  npm ci      │────────▶│                  │────────▶│                  │        │
+ │   │  npm test    │         │  docker build    │         │  kubectl apply   │        │
+ │   │  eslint      │         │  docker push     │         │  set image       │        │
+ │   │  coverage    │         │  :latest + :sha  │         │  rollout status  │        │
+ │   └──────────────┘         └────────┬─────────┘         └────────┬─────────┘        │
+ │                                     │                            │                  │
+ └─────────────────────────────────────┼────────────────────────────┼──────────────────┘
+                                       │                            │
+                                       ▼                            ▼
+ ┌──────────────────┐    ┌─── EKS Cluster ─────────────────────────────────────────────┐
+ │  DockerHub       │    │                                                              │
+ │  ┌────────────┐  │    │  ┌─── Namespace: meditrack ────────────────────────────┐     │
+ │  │ meditrack- │  │    │  │                                                     │     │
+ │  │ api:latest │──┼───▶│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐            │     │
+ │  │ api:<sha>  │  │    │  │  │  Pod 1  │  │  Pod 2  │  │  Pod 3  │            │     │
+ │  └────────────┘  │    │  │  │  :3000  │  │  :3000  │  │  :3000  │            │     │
+ └──────────────────┘    │  │  │ /health │  │ /health │  │ /health │            │     │
+                         │  │  └────┬────┘  └────┬────┘  └────┬────┘            │     │
+                         │  │       └──────┬─────┴────────────┘                  │     │
+                         │  │              ▼                                     │     │
+                         │  │  ┌───────────────────────┐  ┌──────────────────┐   │     │
+                         │  │  │  Service (LB)         │  │  ConfigMap       │   │     │
+                         │  │  │  Port: 80 → 3000      │  │  NODE_ENV=prod   │   │     │
+                         │  │  └───────────────────────┘  │  LOG_LEVEL=info  │   │     │
+                         │  │                              └──────────────────┘   │     │
+                         │  └─────────────────────────────────────────────────────┘     │
+                         │                                                              │
+                         │  ┌─── Monitoring ──────────────────────────────────────┐     │
+                         │  │  Prometheus scrapes /metrics (15s)                  │     │
+                         │  │  → http_requests_total                              │     │
+                         │  │  → http_request_duration_seconds                    │     │
+                         │  │  → appointments_total                               │     │
+                         │  └─────────────────────────────────────────────────────┘     │
+                         └──────────────────────────────────────────────────────────────┘
 ```
 
 ## Prerequisites
@@ -147,16 +139,15 @@ The pipeline triggers automatically when you push to `main`. Since you pushed in
 1. Go to the **Actions** tab in your forked repository
 2. Click on the running workflow to monitor progress
 
-The pipeline runs 4 stages:
+The pipeline runs 3 stages:
 
 | Stage | What It Does | Blocks Deploy? |
 |---|---|---|
 | **Test** | Installs dependencies, runs ESLint, runs Jest tests with coverage | Yes |
-| **Security Scan** | Builds image, runs Trivy vulnerability scan (CRITICAL + HIGH) | Yes |
-| **Build & Push** | Builds final image, pushes to DockerHub with `:latest` and `:sha` tags | Yes |
+| **Build & Push** | Builds Docker image, pushes to DockerHub with `:latest` and `:sha` tags | Yes |
 | **Deploy** | Applies K8s manifests, updates image, waits for rollout | -- |
 
-> **Note:** The first run takes approximately 4-6 minutes.
+> **Note:** The first run takes approximately 3-5 minutes.
 
 ### Step 5 — Connect to Your EKS Cluster
 
@@ -237,8 +228,8 @@ git commit -m "Update dashboard title to v2"
 git push origin main
 ```
 
-3. Watch the pipeline in the **Actions** tab — it runs tests, scans for vulnerabilities, builds a new image, and deploys the update
-4. Refresh the application in your browser — the title should now say "MediTrack v2"
+3. Watch the pipeline in the **Actions** tab -- it runs tests, builds a new image, and deploys the update
+4. Refresh the application in your browser -- the title should now say "MediTrack v2"
 
 ## API Endpoints
 
@@ -274,12 +265,18 @@ Optionally remove the Docker image from DockerHub via your [DockerHub repository
 
 > **Note:** This only removes the application. To destroy the underlying EKS cluster, follow the cleanup steps in the [Cloud Migration Infrastructure README](https://github.com/anmutetech/cloud-migration-infra).
 
+## What's Next?
+
+This pipeline works -- but it has **no security checks**. Code ships to production without scanning for vulnerabilities, checking for leaked secrets, or validating Kubernetes security policies.
+
+Continue to the [Healthcare DevSecOps Lab](https://github.com/anmutetech/healthcare-devsecops-lab) to embed 6 security gates into this pipeline.
+
 ## Project Structure
 
 ```
 healthcare-cicd-lab/
 ├── .github/workflows/
-│   └── ci-cd.yml                # 4-stage pipeline: Test → Scan → Build → Deploy
+│   └── ci-cd.yml                # 3-stage pipeline: Test → Build → Deploy
 ├── app/
 │   ├── package.json             # Dependencies (express, helmet, prom-client, winston)
 │   ├── server.js                # Express server with security middleware and structured logging

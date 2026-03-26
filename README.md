@@ -287,16 +287,16 @@ healthcare-cicd-lab/
 │   │   └── appointments.js      # Appointment scheduling endpoints
 │   ├── __tests__/
 │   │   └── patients.test.js     # Jest test suite (health, patients, appointments)
+│   ├── monitoring/
+│   │   └── metrics.js           # Prometheus metrics (requests, duration, appointments)
 │   └── public/
 │       └── index.html           # MediTrack dashboard UI
 ├── docker/
 │   └── Dockerfile               # Multi-stage build, non-root user, health check
-├── kubernetes/
-│   ├── namespace.yaml           # meditrack namespace
-│   ├── configmap.yaml           # Environment configuration (NODE_ENV, LOG_LEVEL)
-│   ├── deployment.yaml          # 3-replica deployment with probes and resource limits
-│   ├── service.yaml             # LoadBalancer service (port 80 → 3000)
-│   └── servicemonitor.yaml      # Prometheus ServiceMonitor (scrape every 15s)
-└── monitoring/
-    └── metrics.js               # Prometheus metrics (requests, duration, appointments)
+└── kubernetes/
+    ├── namespace.yaml           # meditrack namespace
+    ├── configmap.yaml           # Environment configuration (NODE_ENV, LOG_LEVEL)
+    ├── deployment.yaml          # 3-replica deployment with probes and resource limits
+    ├── service.yaml             # LoadBalancer service (port 80 → 3000)
+    └── servicemonitor.yaml      # Prometheus ServiceMonitor (scrape every 15s)
 ```

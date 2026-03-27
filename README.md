@@ -99,6 +99,7 @@ kubectl version --client
 
 1. Fork this repository to your own GitHub account
 ![image](image.png)
+![image](image-1.png)
 2. Clone your fork:
 
 ```bash
@@ -113,6 +114,7 @@ Edit `kubernetes/deployment.yaml` and replace the image placeholder with your Do
 ```yaml
 image: <your-dockerhub-username>/meditrack-api:latest
 ```
+![image](image-2.png)
 
 Commit and push this change:
 
@@ -125,6 +127,7 @@ git push origin main
 ### Step 3 — Configure GitHub Secrets
 
 In your forked repository, go to **Settings** > **Secrets and variables** > **Actions** and add:
+![image](image-3.png)
 
 | Secret Name | Value |
 |---|---|
@@ -132,6 +135,8 @@ In your forked repository, go to **Settings** > **Secrets and variables** > **Ac
 | `DOCKER_PASSWORD` | Your DockerHub password |
 | `AWS_ACCESS_KEY_ID` | Your IAM user access key ID |
 | `AWS_SECRET_ACCESS_KEY` | Your IAM user secret access key |
+![image](image-4.png)
+![image](image-5.png)
 
 ### Step 4 — Run the CI/CD Pipeline
 
